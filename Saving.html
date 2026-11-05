@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#24170f">
+<title>₹5,000 Savings Challenge</title>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f3eee6;
+  color: white;
+  padding: 15px;
+}
+
+.app {
+  max-width: 650px;
+  margin: auto;
+  background: #24170f;
+  border: 9px solid #87552e;
+  border-radius: 18px;
+  padding: 20px 12px;
+  box-shadow: 0 10px 30px #0003;
+}
+
+h1 {
+  font-size: 27px;
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+}
+
+.subtitle {
+  color: #d6b18c;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.stats {
+  background: #382519;
+  border: 1px solid #8d613b;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.saved {
+  font-size: 28px;
+  font-weight: bold;
+  color: #f3c58e;
+  margin: 7px 0;
+}
+
+.target {
+  font-size: 13px;
+  color: #d5b99e;
+}
+
+.progress-bg {
+  width: 100%;
+  height: 12px;
+  background: #59432f;
+  border-radius: 20px;
+  margin-top: 13px;
+  overflow: hidden;
+}
+
+.progress {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #d69b50, #ffe0a5);
+  transition: width .3s;
+}
+
+.progress-text {
+  text-align: right;
+  font-size: 12px;
+  margin-top: 7px;
+  color: #f5d5ac;
+}
+
+.grid-title {
+  font-size: 16px;
+  margin: 20px 0 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.cell {
+  min-width: 0;
+  aspect-ratio: 1;
+  border: 1px solid #a17a53;
+  background: #493020;
+  color: white;
+  font-size: clamp(8px, 2.5vw, 12px);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 1px;
+}
+
+.cell.done {
+  background: #4c9862;
+  border-color: #8de1a0;
+  text-decoration: line-through;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.controls button {
+  flex: 1;
+  padding: 12px 5px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.undo {
+  background: #d5a36c;
+  color: #24170f;
+}
+
+.reset {
+  background: #a94335;
+  color: white;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 20px;
+  color: #e5bd96;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 15px;
+  font-size: 11px;
+  color: #e8c9a8;
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: #493020;
+}
+
+.green {
+  background: #4c9862;
+}
+
+@media(max-width:380px) {
+  .app {
+    padding: 14px 8px;
+    border-width: 6px;
+  }
+
+  .grid {
+    gap: 3px;
+  }
+
+  .cell {
+    font-size: 8px;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<h1>MY SAVINGS BOX</h1>
+<div class="subtitle">₹5,000 MONEY SAVING CHALLENGE ❤️</div>
+
+<div class="stats">
+  <div class="target">TOTAL SAVINGS</div>
+  <div class="saved" id="saved">₹0</div>
+  <div class="target">Goal: ₹5,000</div>
+
+  <div class="progress-bg">
+    <div class="progress" id="progress"></div>
+  </div>
+
+  <div class="progress-text" id="percentage">
+    0% Completed
+  </div>
+</div>
+
+<div class="grid-title">
+TAP EACH AMOUNT AFTER SAVING IT
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="legend">
+  <span><i class="dot"></i> Pending</span>
+  <span><i class="dot green"></i> Saved</span>
+</div>
+
+<div class="controls">
+  <button class="undo" onclick="undoLast()">↩ Undo</button>
+  <button class="reset" onclick="resetChallenge()">Reset</button>
+</div>
+
+<div class="footer" id="footer">
+Small Amounts Become Big Savings ❤️
+</div>
+
+</div>
+
+<script>
+
+
+const GOAL = 5000;
+
+const amounts = [
+  ...Array(20).fill(10),
+  ...Array(20).fill(20),
+  ...Array(20).fill(40),
+  ...Array(72).fill(50)
+];
+
+// Shuffle the amounts
+amounts.sort(() => Math.random() - 0.5);
+
+let completed = JSON.parse(
+  localStorage.getItem("savedBoxes5000") || "[]"
+);
+
+let history = [];
+
+const grid = document.getElementById("grid");
+
+function money(value) {
+  return "₹" + value.toLocaleString("en-IN");
+}
+
+function render() {
+  grid.innerHTML = "";
+
+  amounts.forEach((amount, index) => {
+    const button = document.createElement("button");
+    button.className = "cell";
+    button.textContent = amount;
+
+    if (completed.includes(index)) {
+      button.classList.add("done");
+    }
+
+    button.onclick = () => toggleBox(index);
+    grid.appendChild(button);
+  });
+
+  updateStats();
+}
+
+function toggleBox(index) {
+  if (completed.includes(index)) {
+    completed = completed.filter(i => i !== index);
+    history = history.filter(i => i !== index);
+  } else {
+    completed.push(index);
+    history.push(index);
+  }
+
+  saveData();
+  render();
+}
+
+function updateStats() {
+  const total = completed.reduce(
+    (sum, index) => sum + amounts[index], 0
+  );
+
+  const percentage = Math.min(
+    (total / GOAL) * 100, 100
+  );
+
+  document.getElementById("saved").textContent =
+    money(total);
+
+  document.getElementById("progress").style.width =
+    percentage + "%";
+
+  document.getElementById("percentage").textContent =
+    percentage.toFixed(1) + "% Completed";
+
+  document.getElementById("footer").textContent =
+    total >= GOAL
+      ? "🎉 Congratulations! You saved ₹5,000!"
+      : "Small Amounts Become Big Savings ❤️";
+}
+
+function saveData() {
+  localStorage.setItem(
+    "savedBoxes5000",
+    JSON.stringify(completed)
+  );
+}
+
+function undoLast() {
+  const last = history.pop();
+
+  if (last !== undefined) {
+    completed = completed.filter(i => i !== last);
+    saveData();
+    render();
+  }
+}
+
+function resetChallenge() {
+  if (confirm("Are you sure you want to reset all savings?")) {
+    completed = [];
+    history = [];
+    saveData();
+    render();
+  }
+}
+
+render();
+
+
+</script>
+</body>
+</html>
